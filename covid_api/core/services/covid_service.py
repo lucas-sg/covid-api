@@ -186,3 +186,22 @@ class CovidService:
             columns={'fecha_diagnostico': "fecha"})
 
         return DataFrameWrapper(df)
+
+
+    @classmethod
+    def grouper(iterable, n, fillvalue=None):
+        args = [iter(iterable)] * n
+        return itertools.zip_longest(*args, fillvalue=fillvalue)
+
+
+    @classmethod
+    def read_csv_chunks(csv_url, chunk_size):
+        with contextlib.closing(requests.get(csv_url, stream=True)) as stream:
+            lines = (line.decode('utf-8') for line in stream.iter_lines(chunk_size))
+            reader = csv.reader(lines, delimiter=',', quotechar='"')
+            chunk = grouper(reader, chunk_size, None)
+            while True:
+                try:
+                    yield [line for line in next(chunk)]
+                except StopIteration:
+                    return
