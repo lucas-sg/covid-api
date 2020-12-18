@@ -5,6 +5,7 @@ import xlrd
 import pandas as pd
 from covid_api.core.models import Province
 from covid_api.settings import COVID_FILE_NAME
+import psycopg2
 
 
 class DataFrameWrapper:
@@ -67,6 +68,24 @@ class CovidService:
     @classmethod
     def get_data(cls) -> DataFrameWrapper:
         is_time_to_refresh = True
+
+        con = psycopg2.connect(
+            host="localhost",
+            database="testdb",
+            user="postgres",
+            password="postgres")
+
+        cur = con.cursor()
+        cur.execute('''CREATE TABLE STUDENT
+              (ADMISSION INT PRIMARY KEY     NOT NULL,
+              NAME           TEXT    NOT NULL,
+              AGE            INT     NOT NULL,
+              COURSE        CHAR(50),
+              DEPARTMENT        CHAR(50));''')
+        print("Table created successfully")
+
+        con.commit()
+        con.close()
 
         if cls.last_refresh:
             refresh_time = cls.last_refresh + timedelta(hours=cls.refresh_rate)

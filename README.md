@@ -13,14 +13,14 @@ git clone https://github.com/alavarello/covid-api.git
 
 cd covid-api
 
-docker build -t covidAPI --no-cache .
+docker build -t covid-api --no-cache .
 ``` 
 
 ## Execution
 
 ```shell script
-docker run -d --name covidAPI-container -p 5432:5432 -p 8000:8000 covidAPI
-docker exec -it covidAPI-container ./run.sh
+docker run -d --name covid-api-container -p 5555:5432 -p 8000:8000 covid-api
+docker exec -it covid-api-container ./run.sh
 ```
 
 # 2019
