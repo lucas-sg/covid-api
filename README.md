@@ -1,6 +1,29 @@
 # Argentine COVID-19 API
 
 This API uses the [Argentinian Ministry of Health (msal.gob.ar) dataset](http://datos.salud.gob.ar/dataset/covid-19-casos-registrados-en-la-republica-argentina)
+# 2020
+## Installation
+Clone the repository using ssh or http
+
+```shell script
+# Clone repo using ssh
+git clone git@github.com:alavarello/covid-api.git
+# Clone repo using http
+git clone https://github.com/alavarello/covid-api.git
+
+cd covid-api
+
+docker build -t covidAPI --no-cache .
+``` 
+
+## Execution
+
+```shell script
+docker run -d --name covidAPI-container -p 5432:5432 -p 8000:8000 covidAPI
+docker exec -it covidAPI-container ./run.sh
+```
+
+# 2019
 
 ## Installation
 
