@@ -244,13 +244,13 @@ class CovidService:
 
 
     @classmethod
-    def grouper(iterable, n, fillvalue=None):
+    def grouper(cls, iterable, n, fillvalue=None):
         args = [iter(iterable)] * n
         return itertools.zip_longest(*args, fillvalue=fillvalue)
 
 
     @classmethod
-    def read_csv_chunks(csv_url, chunk_size):
+    def read_csv_chunks(cls, csv_url, chunk_size):
         with contextlib.closing(requests.get(csv_url, stream=True)) as stream:
             lines = (line.decode('utf-8') for line in stream.iter_lines(chunk_size))
             reader = csv.reader(lines, delimiter=',', quotechar='"')
@@ -263,7 +263,7 @@ class CovidService:
 
 
     @classmethod
-    def dump_csv_lines_into_db(connection, csv_lines, csv_url, chunk_size):
+    def dump_csv_lines_into_db(cls, connection, csv_lines, csv_url, chunk_size):
         table_name = "tabla"
         columns = "columnas"
         insert_sql = """INSERT INTO """ + table_name + "(" + columns + ")" +  """VALUES(%s)"""
