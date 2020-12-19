@@ -14,6 +14,16 @@ from .models import Province, Classification
 from .services import CovidService, DataFrameWrapper
 from .parameters import DateParameter, ClassificationParameter
 
+TABLE_NAME = "public.covid19_casos"
+# ----- GENERIC FUNCTIONS ----- #
+
+def addWherClause (script, hasFilter, toAdd):
+    if not hasFilter:
+        script += " WHERE " + toAdd
+        hasFilter = True
+    else:
+        script += " AND " + toAdd
+    return script, hasFilter
 
 # ----- GENERIC VIEWS ----- #
 
@@ -25,35 +35,57 @@ class ProcessDataView(APIView):
         return data
 
     def filter_data(self, request, data: DataFrameWrapper, **kwargs) -> DataFrameWrapper:
+        query_sript = "SELECT * FROM " + TABLE_NAME
+        has_filter = False
         classification = request.GET.get('classification', None)
         if classification is not None:
             classification = Classification.translate(classification.lower())
-            data.filter_eq('clasificacion_resumen', classification)
+            # data.filter_eq('clasificacion_resumen', classification)
+            query_sript += " WHERE clasificacion_resumen = '" + classification + "'"
+            has_filter = True
         icu = request.GET.get('icu', None)
         if icu is not None:
             value = 'SI' if icu.lower() == "true" else 'NO'
-            data = data.filter_eq('cuidado_intensivo', value)
+            # data = data.filter_eq('cuidado_intensivo', value)
+            to_add = "cuidado_intensivo = '" + value + "'"
+            query_sript, has_filter = addWherClause(query_sript, has_filter, to_add)
+
         respirator = request.GET.get('respirator', None)
         if respirator is not None:
             value = 'SI' if respirator.lower() == "true" else 'NO'
-            data = data.filter_eq('asistencia_respiratoria_mecanica', value)
+            # data = data.filter_eq('asistencia_respiratoria_mecanica', value)
+            to_add = "asistencia_respiratoria_mecanica = '" + value + "'"
+            query_sript, has_filter = addWherClause(query_sript, has_filter, to_add)
+
         dead = request.GET.get('dead', None)
         if dead is not None:
             value = 'SI' if dead.lower() == "true" else 'NO'
-            data = data.filter_eq('fallecido', value)
+            # data = data.filter_eq('fallecido', value)
+            to_add = "fallecido = '" + value + "'"
+            query_sript, has_filter = addWherClause(query_sript, has_filter, to_add)
+
         from_date = request.GET.get('from', None)
         if from_date is not None:
             if dead == 'true':
-                data = data.filter_ge('fecha_fallecimiento', from_date)
+                # data = data.filter_ge('fecha_fallecimiento', from_date)
+                to_add = "fecha_fallecimiento = '" + from_date + "'"
+                query_sript, has_filter = addWherClause(query_sript, has_filter, to_add)
             else:
-                data = data.filter_ge('fecha_diagnostico', from_date)
+                # data = data.filter_ge('fecha_diagnostico', from_date)
+                to_add = "fecha_diagnostico = '" + from_date + "'"
+                query_sript, has_filter = addWherClause(query_sript, has_filter, to_add)
+
         to_date = request.GET.get('to', None)
         if to_date is not None:
             if dead == 'true':
-                data = data.filter_le('fecha_fallecimiento', to_date)
+                # data = data.filter_le('fecha_fallecimiento', to_date)
+                to_add = "fecha_fallecimiento = '" + to_date + "'"
+                query_sript, has_filter = addWherClause(query_sript, has_filter, to_add)
             else:
-                data = data.filter_le('fecha_diagnostico', to_date)
-        return data
+                # data = data.filter_le('fecha_diagnostico', to_date)
+                to_add = "fecha_diagnostico = '" + to_date + "'"
+                query_sript, has_filter = addWherClause(query_sript, has_filter, to_add)
+        return query_sript + ";"
 
     def create_response(self, request, data: DataFrameWrapper, **kwargs) -> Response:
 
@@ -70,8 +102,14 @@ class ProcessDataView(APIView):
         ],
     )
     def get(self, request, **kwargs):
-        data = CovidService.get_data()
-        data = self.filter_data(request, data, **kwargs)
+        # --- New way ---
+        sql_script = self.filter_data(request, None, **kwargs)
+        data = CovidService.get_data(sql_script)
+        # --- old way ---
+        # data = CovidService.get_data()
+        # data = self.filter_data(request, data, **kwargs)
+
+
         data = self.process_data(request, data, **kwargs)
         response = self.create_response(request, data, **kwargs)
         return response
@@ -97,6 +135,7 @@ class ProvinceListView(ProcessDataView):
 
     def process_data(self, request, data: DataFrameWrapper, province_slug=None, **kwargs) -> Response:
         province = Province.from_slug(province_slug)
+        sql_query = "SELECT * FROM " + TABLE_NAME + " WHERE carga_provincia_nombre = '" + province + "';"
         summary = data.filter_eq(
             'carga_provincia_nombre',
             province
@@ -119,6 +158,7 @@ class ProvinceSummaryView(ProcessDataView):
 
         province = Province.from_slug(province_slug)
 
+        sql_query = "select * from " + TABLE_NAME + " where carga_provincia_nombre = '" + province + "';"
         summary = data.filter_eq(
             'carga_provincia_nombre',
             province
@@ -182,7 +222,9 @@ class StatsView(APIView):
         cases_amount = province_data.count()
         cases_per_million = cases_amount * 1000000 / population
         cases_per_hundred_thousand = cases_amount * 100000 / population
+        # sql_script_dead_count = "select * from table where fallecido = 'SI';"
         dead_amount = province_data.filter_eq('fallecido', 'SI').count()
+
         dead_per_million = dead_amount * 1000000 / population
         dead_per_hundred_thousand = dead_amount * 100000 / population
         stats = {
@@ -199,9 +241,12 @@ class StatsView(APIView):
     def get(self, requests):
         workbook = xlrd.open_workbook('poblacion.xls')
         response = []
-        data = CovidService.get_data()
         # Filter the data
-        data = data.filter_eq('clasificacion_resumen', 'Confirmado')
+        sql_script = "select * FROM " + TABLE_NAME + " WHERE clasificacion_resumen = 'Confirmado';"
+
+        data = CovidService.get_data(sql_script)
+
+        # data = data.filter_eq('clasificacion_resumen', 'Confirmado')
         for worksheet in workbook.sheets():
             split_name = worksheet.name.split('-')
             if len(split_name) < 2:
@@ -236,14 +281,17 @@ class ProvinceStatsView(StatsView):
     """
     def get(self, requests, province_slug=None):
         workbook = xlrd.open_workbook('poblacion.xls')
-        data = CovidService.get_data()
-        # Filter the data
-        data = data.filter_eq('clasificacion_resumen', 'Confirmado')
+
+
+        #data = data.filter_eq('clasificacion_resumen', 'Confirmado')
+
         province_name = Province.from_slug(province_slug)
-        province_data = data.filter_eq(
-            'carga_provincia_nombre',
-            province_name
-        )
+        # province_data = data.filter_eq( 'carga_provincia_nombre', province_name)
+
+        # Filter the data
+        sql_script = "select * from table where clasificacion_resumen = 'Confirmado' AND carga_provincia_nombre = '" + province_name + "';"
+        province_data = CovidService.get_data(sql_script)
+
         sheet_name = f'{province_slug}-{province_name.upper()}'
         population = workbook.sheet_by_name(sheet_name).cell(16, 1).value
 

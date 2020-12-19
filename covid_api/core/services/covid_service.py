@@ -7,6 +7,8 @@ from covid_api.core.models import Province
 from covid_api.settings import COVID_FILE_NAME
 import psycopg2
 
+default_query = "SELECT * FROM public.covid19_casos"
+
 
 class DataFrameWrapper:
     data_frame = None
@@ -66,7 +68,7 @@ class CovidService:
     last_refresh = None
 
     @classmethod
-    def get_data(cls) -> DataFrameWrapper:
+    def get_data(cls, sql_query = None) -> DataFrameWrapper:
         is_time_to_refresh = True
 
         con = psycopg2.connect(
@@ -87,6 +89,7 @@ class CovidService:
         con.commit()
         con.close()
 
+
         if cls.last_refresh:
             refresh_time = cls.last_refresh + timedelta(hours=cls.refresh_rate)
             is_time_to_refresh = refresh_time < datetime.now()
@@ -106,6 +109,22 @@ class CovidService:
                 second=0,
                 microsecond=0
             )
+
+        # --- Running the query --- #
+        if sql_query is None:
+            sql_query = default_query
+
+        con = psycopg2.connect(
+            host="localhost",
+            database="testdb",
+            user="postgres",
+            password="postgres")
+
+        # cur = con.cursor()
+        print("executing query: " + sql_query)
+        cls._raw_data = pd.read_sql_query(sql_query, con)
+        print("Query executed")
+
         return DataFrameWrapper(cls._raw_data)
 
     @classmethod
@@ -205,3 +224,20 @@ class CovidService:
             columns={'fecha_diagnostico': "fecha"})
 
         return DataFrameWrapper(df)
+
+
+    @classmethod
+    def execute_query(cls, query) -> DataFrameWrapper:
+        con = psycopg2.connect(
+            host="localhost",
+            database="testdb",
+            user="postgres",
+            password="postgres")
+
+        # cur = con.cursor()
+        print("executing query: " + query)
+        # date = cur.execute(query)
+        dat = pd.read_sql_query(query, con)
+        print("Query executed")
+
+        return dat
