@@ -205,3 +205,17 @@ class CovidService:
                     yield [line for line in next(chunk)]
                 except StopIteration:
                     return
+
+
+    @classmethod
+    def dump_csv_lines_into_db(connection, csv_lines, csv_url, chunk_size):
+        table_name = "tabla"
+        columns = "columnas"
+        insert_sql = """INSERT INTO """ + table_name + "(" + columns + ")" +  """VALUES(%s)"""
+        cur = connection.cursor()
+
+        for csv_lines in read_csv_chunks(csv_url, chunk_size):
+            cur.execute(insert_sql, csv_lines)
+            connection.commit()
+
+        cur.close()
