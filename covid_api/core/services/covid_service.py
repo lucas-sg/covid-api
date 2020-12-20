@@ -95,9 +95,9 @@ class CovidService:
             is_time_to_refresh = refresh_time < datetime.now()
 
         if is_time_to_refresh:
-            if not os.path.isfile(COVID_FILE_NAME):
+            # if not os.path.isfile(COVID_FILE_NAME):
                 # Update the data from the url and save the file
-                cls.dump_csv_lines_into_db(con, cls.data_url, 1000)
+            cls.dump_csv_lines_into_db(con, cls.data_url, 1000)
                 # cls.update_data()
 
             # cls._raw_data = pd.read_csv(
@@ -117,13 +117,13 @@ class CovidService:
             sql_query = default_query
 
         print("Executing query: " + sql_query)
-        cls._raw_data = pd.read_sql_query(sql_query, con)
+        _raw_data = pd.read_sql_query(sql_query, con)
         print("Query executed")
 
         con.commit()
         con.close()
 
-        return DataFrameWrapper(cls._raw_data)
+        return DataFrameWrapper(_raw_data)
 
     @classmethod
     def update_data(cls):
