@@ -291,8 +291,9 @@ class CovidService:
         insert_sql = "INSERT INTO " + table_name + " (" + columns + ") VALUES(%s);"
         cur = connection.cursor()
 
-        for csv_lines in cls.read_csv_chunks(csv_url, chunk_size):
-            cur.execute(insert_sql, csv_lines)
+        for csv_chunk in cls.read_csv_chunks(csv_url, chunk_size):
+            clean_chunk = [line for line in csv_chunk if not line is None]
+            cur.execute(insert_sql, clean_chunk)
             connection.commit()
 
         cur.close()
