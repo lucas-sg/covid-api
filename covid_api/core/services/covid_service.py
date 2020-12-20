@@ -6,8 +6,10 @@ import pandas as pd
 from covid_api.core.models import Province
 from covid_api.settings import COVID_FILE_NAME
 import psycopg2
+import contextlib
+import itertools
 
-default_query = "SELECT * FROM public.covid19_casos;"
+default_query = "SELECT * FROM covid19_casos;"
 
 
 class DataFrameWrapper:
