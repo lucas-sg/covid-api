@@ -9,6 +9,7 @@ import psycopg2
 import contextlib
 import itertools
 import requests
+import csv
 
 default_query = "SELECT * FROM covid19_casos;"
 
