@@ -7,7 +7,7 @@ from covid_api.core.models import Province
 from covid_api.settings import COVID_FILE_NAME
 import psycopg2
 
-default_query = "SELECT * FROM public.covid19_casos"
+default_query = "SELECT * FROM public.covid19_casos;"
 
 
 class DataFrameWrapper:
@@ -77,32 +77,30 @@ class CovidService:
             user="postgres",
             password="postgres")
 
-        cur = con.cursor()
-        cur.execute('''CREATE TABLE STUDENT
-              (ADMISSION INT PRIMARY KEY     NOT NULL,
-              NAME           TEXT    NOT NULL,
-              AGE            INT     NOT NULL,
-              COURSE        CHAR(50),
-              DEPARTMENT        CHAR(50));''')
-        print("Table created successfully")
-
-        con.commit()
-        con.close()
-
+        # cur = con.cursor()
+        # cur.execute('''CREATE TABLE STUDENT
+        #       (ADMISSION INT PRIMARY KEY     NOT NULL,
+        #       NAME           TEXT    NOT NULL,
+        #       AGE            INT     NOT NULL,
+        #       COURSE        CHAR(50),
+        #       DEPARTMENT        CHAR(50));''')
+        # print("Table created successfully")
 
         if cls.last_refresh:
             refresh_time = cls.last_refresh + timedelta(hours=cls.refresh_rate)
             is_time_to_refresh = refresh_time < datetime.now()
 
-        if cls._raw_data is None or is_time_to_refresh:
+        if is_time_to_refresh:
             if not os.path.isfile(COVID_FILE_NAME):
                 # Update the data from the url and save the file
-                cls.update_data()
+                cls.dump_csv_lines_into_db(con, cls.data_url, 1000)
+                # cls.update_data()
 
-            cls._raw_data = pd.read_csv(
-                COVID_FILE_NAME,
-                encoding='utf-8'
-            )
+            # cls._raw_data = pd.read_csv(
+            #     COVID_FILE_NAME,
+            #     encoding='utf-8'
+            # )
+
             # Get the base hour
             cls.last_refresh = datetime.now().replace(
                 minute=0,
@@ -114,16 +112,12 @@ class CovidService:
         if sql_query is None:
             sql_query = default_query
 
-        con = psycopg2.connect(
-            host="localhost",
-            database="testdb",
-            user="postgres",
-            password="postgres")
-
-        # cur = con.cursor()
-        print("executing query: " + sql_query)
+        print("Executing query: " + sql_query)
         cls._raw_data = pd.read_sql_query(sql_query, con)
         print("Query executed")
+
+        con.commit()
+        con.close()
 
         return DataFrameWrapper(cls._raw_data)
 
@@ -254,7 +248,7 @@ class CovidService:
         with contextlib.closing(requests.get(csv_url, stream=True)) as stream:
             lines = (line.decode('utf-8') for line in stream.iter_lines(chunk_size))
             reader = csv.reader(lines, delimiter=',', quotechar='"')
-            chunk = grouper(reader, chunk_size, None)
+            chunk = cls.grouper(reader, chunk_size, None)
             while True:
                 try:
                     yield [line for line in next(chunk)]
@@ -263,13 +257,37 @@ class CovidService:
 
 
     @classmethod
-    def dump_csv_lines_into_db(cls, connection, csv_lines, csv_url, chunk_size):
-        table_name = "tabla"
-        columns = "columnas"
-        insert_sql = """INSERT INTO """ + table_name + "(" + columns + ")" +  """VALUES(%s)"""
+    def dump_csv_lines_into_db(cls, connection, csv_url, chunk_size):
+        table_name = "public.covid19_casos"
+        columns = """id_evento_caso,
+        sexo,
+        edad,
+        edad_años_meses,
+        residencia_pais_nombre,
+        residencia_provincia_nombre,
+        residencia_departamento_nombre,
+        carga_provincia_nombre,
+        fecha_inicio_sintomas,
+        fecha_apertura,
+        sepi_apertura,
+        fecha_internacion,
+        cuidado_intensivo,
+        fecha_cui_intensivo,
+        fallecido,
+        fecha_fallecimiento,
+        asistencia_respiratoria_mecanica,
+        carga_provincia_id,
+        origen_financiamiento,
+        clasificacion,
+        clasificacion_resumen,
+        residencia_provincia_id,
+        fecha_diagnostico,
+        residencia_departamento_id,
+        ultima_actualizacion"""
+        insert_sql = "INSERT INTO " + table_name + " (" + columns + ") VALUES(%s);"
         cur = connection.cursor()
 
-        for csv_lines in read_csv_chunks(csv_url, chunk_size):
+        for csv_lines in cls.read_csv_chunks(csv_url, chunk_size):
             cur.execute(insert_sql, csv_lines)
             connection.commit()
 
