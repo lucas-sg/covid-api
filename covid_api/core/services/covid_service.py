@@ -8,6 +8,7 @@ from covid_api.settings import COVID_FILE_NAME
 import psycopg2
 import contextlib
 import itertools
+import requests
 
 default_query = "SELECT * FROM covid19_casos;"
 

@@ -14,7 +14,7 @@ from .models import Province, Classification
 from .services import CovidService, DataFrameWrapper
 from .parameters import DateParameter, ClassificationParameter
 
-TABLE_NAME = "public.covid19_casos"
+TABLE_NAME = "covid19_casos"
 # ----- GENERIC FUNCTIONS ----- #
 
 def addWherClause (script, hasFilter, toAdd):
