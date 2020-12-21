@@ -68,22 +68,22 @@ class ProcessDataView(APIView):
         if from_date is not None:
             if dead == 'true':
                 # data = data.filter_ge('fecha_fallecimiento', from_date)
-                to_add = "fecha_fallecimiento = '" + from_date + "'"
+                to_add = "fecha_fallecimiento >= '" + from_date + "'"
                 query_sript, has_filter = addWherClause(query_sript, has_filter, to_add)
             else:
                 # data = data.filter_ge('fecha_diagnostico', from_date)
-                to_add = "fecha_diagnostico = '" + from_date + "'"
+                to_add = "fecha_diagnostico >= '" + from_date + "'"
                 query_sript, has_filter = addWherClause(query_sript, has_filter, to_add)
 
         to_date = request.GET.get('to', None)
         if to_date is not None:
             if dead == 'true':
                 # data = data.filter_le('fecha_fallecimiento', to_date)
-                to_add = "fecha_fallecimiento = '" + to_date + "'"
+                to_add = "fecha_fallecimiento <= '" + to_date + "'"
                 query_sript, has_filter = addWherClause(query_sript, has_filter, to_add)
             else:
                 # data = data.filter_le('fecha_diagnostico', to_date)
-                to_add = "fecha_diagnostico = '" + to_date + "'"
+                to_add = "fecha_diagnostico <= '" + to_date + "'"
                 query_sript, has_filter = addWherClause(query_sript, has_filter, to_add)
         return query_sript + ";"
 
@@ -123,7 +123,9 @@ class CountView(ProcessDataView):
     renderer_classes = [JSONRenderer, ]
 
     def create_response(self, request, data: DataFrameWrapper, **kwargs) -> Response:
-        return Response({'count': data.count()})
+        sql_script = "select COUNT(*) FROM " + TABLE_NAME + ";"
+        count = CovidService.get_data(sql_script).data_frame
+        return Response({'count': count['count'].values[0]})
 
 
 # --- PROVINCE VIEWS --- #
@@ -136,10 +138,7 @@ class ProvinceListView(ProcessDataView):
     def process_data(self, request, data: DataFrameWrapper, province_slug=None, **kwargs) -> Response:
         province = Province.from_slug(province_slug)
         sql_query = "SELECT * FROM " + TABLE_NAME + " WHERE carga_provincia_nombre = '" + province + "';"
-        summary = data.filter_eq(
-            'carga_provincia_nombre',
-            province
-        )
+        summary = CovidService.get_data(sql_query)
         return summary
 
 
@@ -159,10 +158,7 @@ class ProvinceSummaryView(ProcessDataView):
         province = Province.from_slug(province_slug)
 
         sql_query = "select * from " + TABLE_NAME + " where carga_provincia_nombre = '" + province + "';"
-        summary = data.filter_eq(
-            'carga_provincia_nombre',
-            province
-        )
+        summary = CovidService.get_data(sql_query)
 
         if province:
             summary = CovidService.summary(['carga_provincia_nombre'], from_date, to_date, summary)
@@ -191,9 +187,9 @@ class LastUpdateView(APIView):
     """
 
     def get(self, request, **kwargs):
-        data = CovidService.get_data()
-        last_update = data['ultima_actualizacion'].max()
-        return Response({'last_update': last_update})
+        query = "SELECT max(ultima_actualizacion) FROM " + TABLE_NAME + ";"
+        data = CovidService.get_data(query).data_frame
+        return Response({'last_update': data['max'].values[0]})
 
 
 # --- COUNTRY SUMMARY VIEW --- #
