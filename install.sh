@@ -11,6 +11,7 @@ cp /app/docs/env.txt /app/covid_api/.env  # In development
 
 # Install Django and Django REST framework into the virtual environment
 pip3 install -r requirements.txt
+pip3 list
 
 # Run migrations
 python3 manage.py migrate

@@ -288,12 +288,20 @@ class CovidService:
         fecha_diagnostico,
         residencia_departamento_id,
         ultima_actualizacion"""
-        insert_sql = "INSERT INTO " + table_name + " (" + columns + ") VALUES(%s);"
+        insert_sql = """INSERT INTO {} ({}) VALUES(%s);""".format(table_name, columns)
         cur = connection.cursor()
 
+        i = 0
         for csv_chunk in cls.read_csv_chunks(csv_url, chunk_size):
-            clean_chunk = [line for line in csv_chunk if not line is None]
-            cur.execute(insert_sql, clean_chunk)
+            query_format = '{},"{}",{},"{}","{}","{}","{}","{}","{}","{}",{},"{}","{}","{}","{}","{}","{}",{},"{}","{}","{}",{},"{}",{},"{}"'
+
+            if i == 0:
+                clean_chunk = [tuple(query_format.format(*line)) for line in csv_chunk[1:] if not line is None]
+            else:
+                clean_chunk = [tuple(query_format.format(*line)) for line in csv_chunk if not line is None]
+
+            i = 1
+            cur.executemany(insert_sql, clean_chunk)
             connection.commit()
 
         cur.close()
