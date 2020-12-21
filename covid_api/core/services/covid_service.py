@@ -97,7 +97,7 @@ class CovidService:
         if is_time_to_refresh:
             # if not os.path.isfile(COVID_FILE_NAME):
                 # Update the data from the url and save the file
-            cls.dump_csv_lines_into_db(con, cls.data_url, 1000)
+            cls.dump_csv_lines_into_db(con, cls.data_url, 100000)
                 # cls.update_data()
 
             # cls._raw_data = pd.read_csv(

@@ -85,7 +85,7 @@ class ProcessDataView(APIView):
                 # data = data.filter_le('fecha_diagnostico', to_date)
                 to_add = "fecha_diagnostico <= '" + to_date + "'"
                 query_sript, has_filter = addWherClause(query_sript, has_filter, to_add)
-        return query_sript + ";"
+        return query_sript
 
     def create_response(self, request, data: DataFrameWrapper, **kwargs) -> Response:
 
@@ -103,14 +103,13 @@ class ProcessDataView(APIView):
     )
     def get(self, request, **kwargs):
         # --- New way ---
-        sql_script = self.filter_data(request, None, **kwargs)
-        data = CovidService.get_data(sql_script)
+        # sql_script = self.filter_data(request, None, **kwargs)
+        # data = CovidService.get_data(sql_script)
         # --- old way ---
         # data = CovidService.get_data()
-        # data = self.filter_data(request, data, **kwargs)
-
-
+        data = self.filter_data(request, None, **kwargs)
         data = self.process_data(request, data, **kwargs)
+
         response = self.create_response(request, data, **kwargs)
         return response
 
@@ -157,7 +156,7 @@ class ProvinceSummaryView(ProcessDataView):
 
         province = Province.from_slug(province_slug)
 
-        sql_query = "select * from " + TABLE_NAME + " where carga_provincia_nombre = '" + province + "';"
+        sql_query = data + " and carga_provincia_nombre = '" + province + "';"
         summary = CovidService.get_data(sql_query)
 
         if province:
