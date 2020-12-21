@@ -9,4 +9,4 @@ django-environ==0.4.5
 django-cors-headers==3.4.0
 djangorestframework-csv==2.1.0
 xlrd==1.2.0
-psycopg2-binary
+psycopg2-binary==2.8.6
